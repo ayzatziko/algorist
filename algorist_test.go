@@ -1,6 +1,8 @@
 package algorist
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -283,8 +285,6 @@ func predecessorList_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
 			return l
 		}
 	}
-
-	return nil
 }
 
 // Binary search tree 3.4.1
@@ -298,26 +298,26 @@ type bstree struct {
 	parent, left, right *bstree
 }
 
-func search_bst(t *bstree, k string) *bstree {
-	if t == nil || t.item.key == k {
-		return t
-	}
-	if t.item.key > k {
-		return search_bst(t.left, k)
-	}
+// func search_bst(t *bstree, k string) *bstree {
+// 	if t == nil || t.item.key == k {
+// 		return t
+// 	}
+// 	if t.item.key > k {
+// 		return search_bst(t.left, k)
+// 	}
 
-	return search_bst(t.right, k)
-}
+// 	return search_bst(t.right, k)
+// }
 
-func min_bst(t *bstree) *bstree {
-	if t == nil {
-		return nil
-	} else if t.left == nil {
-		return t
-	}
+// func min_bst(t *bstree) *bstree {
+// 	if t == nil {
+// 		return nil
+// 	} else if t.left == nil {
+// 		return t
+// 	}
 
-	return min_bst(t.left)
-}
+// 	return min_bst(t.left)
+// }
 
 func max_bst(t *bstree) *bstree {
 	if t == nil {
@@ -890,7 +890,8 @@ func build_balanced_tree(ints []int, n **left_count_bst_e) {
 	build_balanced_tree(left, n)
 	build_balanced_tree(right, n)
 }
-func testInvariant(n *left_count_bst_e) {
+
+func test_balanced_tree_invariant(n *left_count_bst_e) {
 	if n == nil {
 		return
 	}
@@ -902,8 +903,8 @@ func testInvariant(n *left_count_bst_e) {
 	if v != n.left_tree_count {
 		panic(fmt.Sprintf("invariant is not hold: node: %v, left: %v", n, n.left))
 	}
-	testInvariant(n.left)
-	testInvariant(n.right)
+	test_balanced_tree_invariant(n.left)
+	test_balanced_tree_invariant(n.right)
 }
 
 func left_subtree_count_invariant(n *left_count_bst_e) int {
@@ -974,6 +975,711 @@ func TestCountSmaller(t *testing.T) {
 				if res[i] != ref[i] {
 					t.Errorf("idx %d, want %v, got %v", i, ref[i], res[i])
 				}
+			}
+		})
+	}
+}
+
+// Chapter 4. Heap and heapsort
+
+type heap_4_3 []int
+
+var make_heap_4_3 = make_heap_slow_4_3
+
+func make_heap_slow_4_3(h *heap_4_3, ints []int) {
+	if cap(*h) <= 1 {
+		*h = make(heap_4_3, 1, len(ints)+1)
+	} else {
+		*h = (*h)[:1]
+	}
+
+	for _, v := range ints {
+		heap_insert_4_3(h, v)
+	}
+}
+
+func make_heap_fast_4_3(h *heap_4_3, ints []int) {
+	n := len(ints) + 1
+	if cap(*h) < n {
+		*h = make(heap_4_3, n)
+	} else {
+		*h = (*h)[:n]
+	}
+
+	copy((*h)[1:], ints)
+
+	for i := n / 2; i > 0; i-- {
+		heap_bubble_down_recursive_4_3(h, n, i)
+	}
+}
+
+func heap_insert_4_3(h *heap_4_3, n int) {
+	(*h) = append((*h), n)
+
+	if len((*h)) <= 2 {
+		return
+	}
+
+	// bubble up.
+	i := len((*h)) - 1
+	p := i / 2
+	for p >= 1 && (*h)[i] < (*h)[p] {
+		(*h)[p], (*h)[i] = (*h)[i], (*h)[p]
+		i, p = p, p/2
+	}
+}
+
+func heap_min_4_3(h *heap_4_3) (int, bool) {
+	if len(*h) == 1 {
+		return 0, false
+	}
+
+	n := len(*h) - 1
+	min := (*h)[1]
+	(*h)[1] = (*h)[n]
+	(*h) = (*h)[:n]
+
+	heap_bubble_down_recursive_4_3(h, n, 1)
+	return min, true
+}
+
+func heap_bubble_down_recursive_4_3(h *heap_4_3, n, p int) {
+	mini := p * 2
+	if n <= mini {
+		return
+	} else if mini+1 < n && (*h)[mini+1] < (*h)[mini] {
+		mini = mini + 1
+	}
+	if (*h)[p] <= (*h)[mini] {
+		return
+	}
+	(*h)[p], (*h)[mini] = (*h)[mini], (*h)[p]
+	heap_bubble_down_recursive_4_3(h, n, mini)
+}
+
+func heapsort_4_3_(ints []int) {
+	if len(ints) == 0 {
+		return
+	}
+
+	var h heap_4_3
+	make_heap_4_3(&h, ints)
+	ints = ints[:0]
+	for v, ok := heap_min_4_3(&h); ok; v, ok = heap_min_4_3(&h) {
+		ints = append(ints, v)
+	}
+}
+
+func TestHeapSort_4_3(t *testing.T) {
+	tt := []struct {
+		arr  []int
+		want []int
+	}{
+		{[]int{}, []int{}},
+		{nil, nil},
+		{[]int{6, 4, 3, 2, 1}, []int{1, 2, 3, 4, 6}},
+		{[]int{9, 9, 6, 6, 1, 1}, []int{1, 1, 6, 6, 9, 9}},
+	}
+
+	for _, tc := range tt {
+		t.Run(fmt.Sprintf("fast:%v->%v", tc.arr, tc.want), func(t *testing.T) {
+			make_heap_4_3 = make_heap_slow_4_3
+			arr := make([]int, len(tc.arr))
+			copy(arr, tc.arr)
+			heapsort_4_3_(arr)
+			for i := range tc.want {
+				if arr[i] != tc.want[i] {
+					t.Fatalf("i: %d, want %v, got %v", i, tc.want, arr)
+				}
+			}
+		})
+		t.Run(fmt.Sprintf("slow:%v->%v", tc.arr, tc.want), func(t *testing.T) {
+			make_heap_4_3 = make_heap_fast_4_3
+			arr := make([]int, len(tc.arr))
+			copy(arr, tc.arr)
+			heapsort_4_3_(arr)
+			for i := range tc.want {
+				if arr[i] != tc.want[i] {
+					t.Fatalf("i: %d, want %v, got %v", i, tc.want, arr)
+				}
+			}
+		})
+	}
+}
+
+// 4.5 mergesort
+
+type item_type_4_5 int
+
+func merge_sort_array_4_5(arr, bufl, bufr []item_type_4_5) {
+	n := len(arr)
+	if n <= 1 {
+		return
+	}
+
+	m := n / 2
+	merge_sort_array_4_5(arr[:m], bufl, bufr)
+	merge_sort_array_4_5(arr[m:], bufl, bufr)
+
+	// arr[:m] & arr[m:] are sorted, need to merge
+	copy(bufl, arr[:m])
+	bufr = arr[m:]
+	arr = arr[:0]
+
+	lp, rp := 0, 0
+	for lp < m && rp < n-m {
+		if bufl[lp] <= bufr[rp] {
+			arr = append(arr, bufl[lp])
+			lp++
+		} else {
+			arr = append(arr, bufr[rp])
+			rp++
+		}
+	}
+
+	if lp < m {
+		for ; lp < m; lp++ {
+			arr = append(arr, bufl[lp])
+		}
+	}
+	// else do not care about right side since values already there
+}
+
+func TestMergesort_array_4_5(t *testing.T) {
+	tt := []struct {
+		arr []item_type_4_5
+		res []item_type_4_5
+	}{
+		{nil, nil},
+		{[]item_type_4_5{}, []item_type_4_5{}},
+		{[]item_type_4_5{5, 4, 3, 2, 1}, []item_type_4_5{1, 2, 3, 4, 5}},
+		{[]item_type_4_5{5, 1, 4, 2, 3, 3, 4, 2, 1, 5}, []item_type_4_5{1, 1, 2, 2, 3, 3, 4, 4, 5, 5}},
+	}
+
+	// dont care about test names from here, writing one by one hand
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			n := len(tc.arr)
+			merge_sort_array_4_5(tc.arr, make([]item_type_4_5, n/2), make([]item_type_4_5, n/2))
+			for i := range tc.res {
+				if tc.arr[i] != tc.res[i] {
+					t.Fatalf("want %v, got %v", tc.res, tc.arr)
+				}
+			}
+		})
+	}
+}
+
+type item_list_type_4_5 struct {
+	v    item_type_4_5
+	next *item_list_type_4_5
+}
+
+func merge_sort_list_4_5(head *item_list_type_4_5) *item_list_type_4_5 {
+	left := head
+	if left == nil || left.next == nil {
+		return head
+	}
+
+	ltail, right, ahead := left, left, left
+	for ahead != nil && ahead.next != nil {
+		ltail = right
+		right, ahead = right.next, ahead.next.next
+	}
+	ltail.next = nil
+
+	lh := merge_sort_list_4_5(left)
+	rh := merge_sort_list_4_5(right)
+
+	var htmp item_list_type_4_5
+	merge_recursive_4_5(&htmp, lh, rh)
+	return htmp.next
+}
+
+func merge_recursive_4_5(t, l, r *item_list_type_4_5) {
+	if l == nil {
+		t.next = r
+		return
+	} else if r == nil {
+		t.next = l
+		return
+	}
+
+	if l.v <= r.v {
+		t.next = l
+		merge_recursive_4_5(t.next, l.next, r)
+		return
+	}
+
+	t.next = r
+	merge_recursive_4_5(t.next, l, r.next)
+}
+
+func build_list_4_5(vv []item_type_4_5) *item_list_type_4_5 {
+	if len(vv) == 0 {
+		return nil
+	}
+
+	n := len(vv)
+	var tail *item_list_type_4_5
+
+	for i := n - 1; i >= 0; i-- {
+		tail = &item_list_type_4_5{v: vv[i], next: tail}
+	}
+
+	return tail
+}
+
+func list_4_5_eq(a, b *item_list_type_4_5) bool {
+	if a == nil && b == nil {
+		return true
+	} else if (a == nil) != (b == nil) {
+		return false
+	} else if a.v != b.v {
+		return false
+	}
+
+	return list_4_5_eq(a.next, b.next)
+}
+
+func TestMergesort_list_5_5(t *testing.T) {
+	tt := []struct {
+		arr []item_type_4_5
+		res []item_type_4_5
+	}{
+		{nil, nil},
+		{[]item_type_4_5{}, []item_type_4_5{}},
+		{[]item_type_4_5{5, 4, 3, 2, 1}, []item_type_4_5{1, 2, 3, 4, 5}},
+		{[]item_type_4_5{5, 1, 4, 2, 3, 3, 4, 2, 1, 5}, []item_type_4_5{1, 1, 2, 2, 3, 3, 4, 4, 5, 5}},
+	}
+
+	// dont care about test names from here, writing by one hand
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			h := merge_sort_list_4_5(build_list_4_5(tc.arr))
+			if w := build_list_4_5(tc.res); !list_4_5_eq(h, w) {
+				t.Fatalf("%#v, %#v", w, h)
+			}
+		})
+	}
+}
+
+func quicksort_4_6(arr []item_type_4_5) {
+	n := len(arr)
+	if n <= 1 {
+		return
+	}
+
+	fhigh, piv := 0, arr[n-1]
+	for i := 0; i < n-1; i++ {
+		if arr[i] <= piv {
+			arr[fhigh], arr[i] = arr[i], arr[fhigh]
+			fhigh++
+		}
+	}
+
+	arr[fhigh], arr[n-1] = arr[n-1], arr[fhigh]
+	quicksort_4_6(arr[:fhigh])
+	quicksort_4_6(arr[fhigh+1:])
+}
+
+func TestQuicksort_4_6(t *testing.T) {
+	tt := []struct {
+		arr []item_type_4_5
+		res []item_type_4_5
+	}{
+		{nil, nil},
+		{[]item_type_4_5{}, []item_type_4_5{}},
+		{[]item_type_4_5{5, 4, 3, 2, 1}, []item_type_4_5{1, 2, 3, 4, 5}},
+		{[]item_type_4_5{5, 1, 4, 2, 3, 3, 4, 2, 1, 5}, []item_type_4_5{1, 1, 2, 2, 3, 3, 4, 4, 5, 5}},
+	}
+
+	// dont care about test names from here, writing by one hand
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			quicksort_4_6(tc.arr)
+
+			for i := range tc.res {
+				if tc.arr[i] != tc.res[i] {
+					t.Fatalf("want %v, got %v", tc.res, tc.arr)
+				}
+			}
+		})
+	}
+}
+
+// 7. Graphs
+
+type edgenode struct {
+	y      int
+	weight int
+	next   *edgenode
+}
+
+const maxverticies = 100
+
+type graph struct {
+	edges      []*edgenode // starts from 1
+	degree     []int
+	nverticies int
+	nedges     int
+	directed   bool
+}
+
+func read_graph(g *graph, directed bool, b []byte) error {
+	if g.degree == nil {
+		g.degree = make([]int, maxverticies+1)
+	}
+	for i := range g.degree {
+		g.degree[i] = 0
+	}
+	if g.edges == nil {
+		g.edges = make([]*edgenode, maxverticies+1)
+	}
+	for i := range g.edges {
+		g.edges[i] = nil
+	}
+	g.nedges = 0
+	g.nverticies = 0
+	g.directed = directed
+
+	s := bufio.NewScanner(bytes.NewBuffer(b))
+	if !s.Scan() {
+		return nil
+	}
+	if _, err := fmt.Fscanf(bytes.NewBuffer(s.Bytes()), "%d", &g.nverticies); err != nil {
+		return err
+	}
+
+	var x, y int
+	for s.Scan() {
+		if _, err := fmt.Fscanf(bytes.NewBuffer(s.Bytes()), "%d %d", &x, &y); err != nil {
+			return err
+		}
+
+		insert_edge(g, x, y, directed)
+	}
+
+	return nil
+}
+
+func insert_edge(g *graph, x, y int, directed bool) {
+	e := edgenode{y: y, next: g.edges[x]}
+	g.edges[x] = &e
+	g.degree[x]++
+	if !directed {
+		insert_edge(g, y, x, true)
+	} else {
+		g.nedges++
+	}
+}
+
+func string_graph(g *graph) string {
+	var b bytes.Buffer
+	var e *edgenode
+	for i := 1; i <= g.nverticies; i++ {
+		fmt.Fprintf(&b, "%d:", i)
+		for e = g.edges[i]; e != nil; e = e.next {
+			fmt.Fprintf(&b, " %d", e.y)
+		}
+		fmt.Fprintf(&b, "\n")
+	}
+	return b.String()
+}
+
+func TestGraph_7_2(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+		out      string
+	}{
+		{"", false, ""},
+		{"4\n1 2\n2 3\n2 4\n3 4\n", true, "1: 2\n2: 4 3\n3: 4\n4:\n"},
+		{"4\n1 2\n2 3\n2 4\n3 4\n", false, "1: 2\n2: 4 3 1\n3: 4 2\n4: 3 2\n"},
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			if s := string_graph(&g); s != tc.out {
+				t.Fatalf("unexpected output: \nwant %s\ngot %s", tc.out, s)
+			}
+		})
+	}
+}
+
+var (
+	graph_discovered_7 = make([]bool, maxverticies+1)
+	graph_processed_7  = make([]bool, maxverticies+1)
+	graph_parents_7    = make([]int, maxverticies+1)
+	graph_time_7       int
+)
+
+func graph_init_search_7(g *graph) {
+	for i := 0; i <= g.nverticies; i++ {
+		graph_discovered_7[i] = false
+		graph_processed_7[i] = false
+	}
+	graph_time_7 = 0
+}
+
+func graph_bfs_7_6(g *graph, s int,
+	process_vertex_before, process_vertex_after func(int),
+	process_edge func(int, int),
+) {
+
+	queue := make([]int, 1, g.nverticies)
+	queue[0] = s
+	graph_discovered_7[s] = true
+	graph_parents_7[s] = -1
+
+	for len(queue) > 0 {
+		v := queue[0]
+		queue = queue[1:]
+
+		graph_discovered_7[v] = true
+		process_vertex_before(v)
+
+		for p := g.edges[v]; p != nil; p = p.next {
+			if !graph_processed_7[p.y] || g.directed {
+				process_edge(v, p.y)
+			}
+			if !graph_discovered_7[p.y] {
+				queue = append(queue, p.y)
+				graph_discovered_7[p.y] = true
+				graph_parents_7[p.y] = v
+			}
+		}
+		graph_processed_7[v] = true
+		process_vertex_after(v)
+	}
+}
+
+func TestGraph_bfs_7_6(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+		s        int
+
+		out string // a->b\n
+	}{
+		{"4\n1 2\n2 3\n2 4\n3 4\n", true, 1, "1->2\n2->4\n2->3\n3->4\n"},
+		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, "1->2\n2->4\n2->3\n4->3\n"},
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			s := ""
+			graph_init_search_7(&g)
+			graph_bfs_7_6(&g, tc.s, func(i int) {}, func(i int) {}, func(a, b int) {
+				s += fmt.Sprintf("%d->%d\n", a, b)
+			})
+
+			if s != tc.out {
+				t.Fatalf("unexpected output: \nwant %s\ngot %s", tc.out, s)
+			}
+		})
+	}
+}
+
+func graph_bfs_find_path_7_6(s, e int, parents []int) []int {
+	path := graph_bfs_find_path_recursive_7_6(s, e, parents, nil)
+	for i, e := 0, len(path)-1; i < e; i, e = i+1, e-1 {
+		path[i], path[e] = path[e], path[i]
+	}
+	return path
+}
+
+func graph_bfs_find_path_recursive_7_6(s, e int, parents, path []int) []int {
+	if s == e || parents[e] == -1 {
+		return append(path, e)
+	}
+
+	return graph_bfs_find_path_recursive_7_6(s, parents[e], parents, append(path, e))
+}
+
+func TestGraph_bfs_find_path_7_6(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+		start    int
+		from, to int
+
+		out []int // {from, ..., end}
+	}{
+		{"4\n1 2\n2 3\n2 4\n3 4\n", true, 1, 1, 4, []int{1, 2, 4}},
+		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, 1, 4, []int{1, 2, 4}},
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			graph_bfs_7_6(&g, tc.start, func(i int) {}, func(i int) {}, func(a, b int) {})
+			path := graph_bfs_find_path_7_6(tc.from, tc.to, graph_parents_7)
+			for i := 0; i < len(path); i++ {
+				if path[i] != tc.out[i] {
+					t.Fatalf("unexpected output: \nwant %v\ngot %v", tc.out, path)
+				}
+			}
+		})
+	}
+}
+
+func graph_connected_components_7_7(g *graph) []int {
+	var components []int
+	for i := 1; i <= g.nverticies; i++ {
+		if !graph_discovered_7[i] {
+			graph_bfs_7_6(g, i, func(i int) {}, func(i int) {}, func(_, _ int) {})
+			components = append(components, i)
+		}
+	}
+	return components
+}
+
+func TestGraph_connected_components_7_6(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+
+		out []int // {c0, ..., cN}
+	}{
+		{"6\n1 2\n2 3\n2 4\n3 4\n5 6", true, []int{1, 5}},
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			cc := graph_connected_components_7_7(&g)
+			for i := 0; i < len(cc); i++ {
+				if cc[i] != tc.out[i] {
+					t.Fatalf("unexpected output: \nwant %v\ngot %v", tc.out, cc)
+				}
+			}
+		})
+	}
+}
+
+const (
+	graph_white = -1
+	graph_black = 1
+)
+
+var (
+	graph_colors_7_7    = make([]int, maxverticies+1)
+	graph_bipartite_7_7 = false
+)
+
+func graph_two_color_7_7(g *graph) {
+	graph_bipartite_7_7 = true
+	for i := range graph_colors_7_7 {
+		graph_colors_7_7[i] = 0
+	}
+
+	for i := 1; i <= g.nverticies; i++ {
+		if !graph_discovered_7[i] {
+			graph_colors_7_7[i] = graph_white
+			graph_bfs_7_6(g, i, func(i int) {}, func(i int) {}, func(a, b int) {
+				if graph_colors_7_7[a] == graph_colors_7_7[b] {
+					graph_bipartite_7_7 = false
+				}
+
+				graph_colors_7_7[b] = -1 * graph_colors_7_7[a]
+			})
+		}
+	}
+}
+
+func TestGraph_two_color_7_7(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+
+		bipartite bool
+	}{
+		{"6\n1 2\n2 3\n2 4\n5 6", true, true},
+		{"6\n1 2\n2 3\n3 2\n2 4\n5 6", false, true},
+		{"6\n1 2\n2 3\n2 4\n3 1\n5 6", true, false},
+		{"6\n1 2\n2 3\n2 4\n3 1\n5 6", false, false},
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			graph_two_color_7_7(&g)
+			if graph_bipartite_7_7 != tc.bipartite {
+				t.Fatalf("unexpected output: \nwant %v\ngot %v", tc.bipartite, graph_bipartite_7_7)
+			}
+		})
+	}
+}
+
+var (
+	graph_entry_time_7_7 = make([]int, maxverticies+1)
+	graph_exit_time_7_7  = make([]int, maxverticies+1)
+	graph_dfs_finished   = false
+)
+
+func graph_dfs_7_8(g *graph, s int,
+	process_vertex_before, process_vertex_after func(int),
+	process_edge func(int, int)) {
+
+	graph_discovered_7[s] = true
+	graph_time_7++
+	graph_entry_time_7_7[s] = graph_time_7
+	process_vertex_before(s)
+
+	for p := g.edges[s]; p != nil; p = p.next {
+		if !graph_discovered_7[s] {
+			graph_parents_7[p.y] = s
+			process_edge(s, p.y)
+			graph_dfs_7_8(g, p.y, process_vertex_before, process_edge)
+		} else if (!graph_processed_7[s] && graph_parents_7[s] != p.y) || g.directed {
+			process_edge(s, p.y)
+		}
+
+		if graph_dfs_finished {
+			return
+		}
+	}
+
+	graph_time_7++
+	graph_exit_time_7_7[s] = graph_time_7
+	graph_processed_7[s] = true
+}
+
+func TestGraph_dfs_7_8(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+		s        int
+
+		out string // a->b\n
+	}{
+		{"4\n1 2\n2 3\n2 4\n3 4\n", true, 1, "1->2\n2->4\n2->3\n3->4\n"},
+		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, "1->2\n2->4\n2->3\n4->3\n"},
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			s := ""
+			graph_init_search_7(&g)
+			graph_dfs_7_8(&g, tc.s, func(i int) {}, func(i int) {}, func(a, b int) {
+				s += fmt.Sprintf("%d->%d\n", a, b)
+			})
+
+			if s != tc.out {
+				t.Fatalf("unexpected output: \nwant %s\ngot %s", tc.out, s)
 			}
 		})
 	}
