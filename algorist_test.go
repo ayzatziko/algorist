@@ -1308,6 +1308,102 @@ func TestQuicksort_4_6(t *testing.T) {
 	}
 }
 
+// 5. Divide and conquer
+
+// https://leetcode.com/problems/median-of-two-sorted-arrays/submissions/
+func findMedianSortedArrays(nums1 []int, nums2 []int) float64 {
+	n := len(nums1) + len(nums2)
+	t := make([]int, 0, n)
+	for len(nums1) > 0 && len(nums2) > 0 {
+		if nums1[0] < nums2[0] {
+			t = append(t, nums1[0])
+			nums1 = nums1[1:]
+		} else {
+			t = append(t, nums2[0])
+			nums2 = nums2[1:]
+		}
+	}
+
+	t = append(t, nums1...)
+	t = append(t, nums2...)
+
+	if n%2 == 1 {
+		return float64(t[n/2])
+	}
+
+	sum := t[n/2] + t[n/2-1]
+	return float64(sum) / float64(2)
+}
+
+func TestFindMedianSortedArrays(t *testing.T) {
+	tt := []struct {
+		nums1, nums2 []int
+		out          float64
+	}{
+		{[]int{1, 3}, []int{2}, 2},
+		{[]int{1, 2}, []int{3, 4}, 2.5},
+	}
+
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			o := findMedianSortedArrays(tc.nums1, tc.nums2)
+			if o != tc.out {
+				t.Fatalf("unexpected median: want %.1f, got %.1f", tc.out, o)
+			}
+		})
+	}
+}
+
+// https://leetcode.com/problems/maximum-subarray/
+func maxSubArray(nums []int) int {
+	s, _, _ := maxSubArrayRecursive(nums, 0, len(nums))
+	return s
+}
+
+func maxSubArrayRecursive(nums []int, low, high int) (int, int, int) {
+	if high-low == 1 {
+		return nums[low], low, high
+	}
+
+	m := (high + low) / 2
+	left, ll, lh := maxSubArrayRecursive(nums, low, m)
+	right, rl, rh := maxSubArrayRecursive(nums, m, high)
+
+	s := left + right
+	for i := lh; i < rl; i++ {
+		s += nums[i]
+	}
+	if s > left && s > right {
+		return s, ll, rh
+	}
+
+	if left > right {
+		return left, ll, lh
+	}
+
+	return right, rl, rh
+}
+
+func TestMaxSubArray(t *testing.T) {
+	tt := []struct {
+		nums []int
+		out  int
+	}{
+		{[]int{-2, 1, -3, 4, -1, 2, 1, -5, 4}, 6},
+		{[]int{1}, 1},
+		{[]int{5, 4, -1, 7, 8}, 23},
+	}
+
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			o := maxSubArray(tc.nums)
+			if o != tc.out {
+				t.Fatalf("unexpected median: want %d, got %d", tc.out, o)
+			}
+		})
+	}
+}
+
 // 7. Graphs
 
 type edgenode struct {
@@ -1638,11 +1734,11 @@ func graph_dfs_7_8(g *graph, s int,
 	process_vertex_before(s)
 
 	for p := g.edges[s]; p != nil; p = p.next {
-		if !graph_discovered_7[s] {
+		if !graph_discovered_7[p.y] {
 			graph_parents_7[p.y] = s
 			process_edge(s, p.y)
-			graph_dfs_7_8(g, p.y, process_vertex_before, process_edge)
-		} else if (!graph_processed_7[s] && graph_parents_7[s] != p.y) || g.directed {
+			graph_dfs_7_8(g, p.y, process_vertex_before, process_vertex_after, process_edge)
+		} else if (!graph_processed_7[p.y] && graph_parents_7[s] != p.y) || g.directed {
 			process_edge(s, p.y)
 		}
 
@@ -1665,7 +1761,7 @@ func TestGraph_dfs_7_8(t *testing.T) {
 		out string // a->b\n
 	}{
 		{"4\n1 2\n2 3\n2 4\n3 4\n", true, 1, "1->2\n2->4\n2->3\n3->4\n"},
-		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, "1->2\n2->4\n2->3\n4->3\n"},
+		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, "1->2\n2->4\n4->3\n3->2\n"},
 	}
 
 	var g graph
@@ -1680,6 +1776,175 @@ func TestGraph_dfs_7_8(t *testing.T) {
 
 			if s != tc.out {
 				t.Fatalf("unexpected output: \nwant %s\ngot %s", tc.out, s)
+			}
+		})
+	}
+}
+
+// Here is the place for procedures of finding articulation verticies, but it was hard to understand for now.
+// Will return to it later.
+
+const (
+	edge_back    = 0
+	edge_tree    = 1
+	edge_forward = 2
+	edge_cross   = 3
+)
+
+func graph_edge_classification_7(x, y int) (int, bool) {
+	switch {
+	case graph_parents_7[y] == x:
+		return edge_tree, true
+	case graph_discovered_7[y] && !graph_processed_7[y]:
+		return edge_back, true
+	case graph_processed_7[y] && graph_entry_time_7_7[y] > graph_entry_time_7_7[x]:
+		return edge_forward, true
+	case graph_processed_7[y] && graph_entry_time_7_7[y] < graph_entry_time_7_7[x]:
+		return edge_cross, true
+	}
+
+	fmt.Printf("Warning: self loop (%d,%d)\n", x, y)
+	return -1, false
+}
+
+func graph_topsort_7_10(g *graph) ([]int, bool) {
+	s := make([]int, 0, g.nverticies)
+	dag := true
+	for i := 1; i <= g.nverticies && !graph_dfs_finished; i++ {
+		if !graph_discovered_7[i] {
+			graph_dfs_7_8(g, i, func(_ int) {}, func(x int) {
+				s = append(s, x)
+			}, func(a, b int) {
+				if edgetyp, ok := graph_edge_classification_7(a, b); !ok || edgetyp == edge_back {
+					dag = false
+					graph_dfs_finished = true
+				}
+			})
+		}
+	}
+
+	for i, n := 0, len(s); i > n; i, n = i+1, n+1 {
+		s[i], s[n] = s[n], s[i]
+	}
+	return s, dag
+}
+
+func TestGraph_topsort_7_10(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+
+		out   []int
+		outok bool
+	}{
+		{"4\n1 2\n2 3\n2 4\n3 4\n", true, []int{4, 3, 2, 1}, true},
+		{"4\n2 1\n2 4\n3 2\n3 4\n", true, []int{3, 2, 4, 1}, true},
+		{"4\n1 2\n2 3\n2 4\n3 4\n4 1\n", true, nil, false}, // backedge
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			o, ok := graph_topsort_7_10(&g)
+
+			for i := range o {
+				if o[i] != tc.out[i] {
+					t.Fatalf("unexpected output: \nwant %v,%v\ngot %v,%v", tc.out, tc.outok, o, ok)
+				}
+			}
+
+			if ok != tc.outok {
+				t.Fatalf("unexpected output: \nwant %v,%v\ngot %v,%v", tc.out, tc.outok, o, ok)
+			}
+		})
+	}
+}
+
+// a bit of explaination to myself.
+// For ex we have a graph
+// 6\n1 3\n1 2\n2 3\n2 5\n3 4\n4 5\n5 6\n 6 4\n
+// in this graph we have a 2 strongly connected components [1 2 3] and [4 5 6].
+// The trick for is that it is really hard to see that code really does the work,
+// but a have written an execution on papaer for a reversed graph and this is actually works.
+// For this graph a transposed graph really has not outgoing edges from [1 2 3] to [4 5 6].
+func graph_strong_components_7_10(g *graph) [][]int {
+	// consider a graph from comment avove.
+
+	dfs1stack := make([]int, 0, g.nverticies)
+
+	for i := 1; i < g.nverticies; i++ {
+		if !graph_discovered_7[i] {
+			graph_dfs_7_8(g, i, func(_ int) {}, func(x int) {
+				dfs1stack = append(dfs1stack, x)
+			}, func(_, _ int) {})
+		}
+	}
+	// at the end of the day dfs1stack for a graph above should be 4,6,5,3,2,1
+
+	// build a transpose graph - the same graph but verticies reversed.
+	// traverse such graph gives us a nodes can reach any node.
+	gt := graph{
+		nverticies: g.nverticies,
+		directed:   true,
+	}
+	for i := 1; i < g.nverticies; i++ {
+		for p := g.edges[i]; p != nil; p = p.next {
+			insert_edge(g, p.y, i, true)
+		}
+	}
+	// a transposed graph is 6\n3 1\n2 1\n3 2\n5 2\n4 3\n5 4\n6 5\n4 6\n
+
+	var components [][]int
+	var cur []int
+	graph_init_search_7(&gt)
+	for len(dfs1stack) > 0 {
+		i := dfs1stack[len(dfs1stack)-1]
+		dfs1stack = dfs1stack[:len(dfs1stack)-1]
+		if !graph_discovered_7[i] {
+			components = append(components, cur)
+			cur = nil
+			graph_dfs_7_8(&gt, i, func(x int) {
+				cur = append(cur, x)
+			}, func(_ int) {}, func(_, _ int) {})
+		}
+	}
+
+	return components
+}
+
+func TestGraph_strong_components_7_10(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+
+		out [][]int
+	}{
+		{"8\n1 2\n2 3\n2 4\n2 5\n3 1\n4 1\n4 6\n4 8\n8 6\n6 7\n7 5\n5 6\n", true, [][]int{{1, 2, 3, 4}, {5, 6, 7}, {8}}},
+		{"6\n1 3\n1 2\n2 3\n2 5\n3 4\n4 5\n5 6\n 6 4\n", true, [][]int{{1, 2, 3}, {4, 5, 6}}},
+	}
+
+	var g graph
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_graph(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			components := graph_strong_components_7_10(&g)
+
+			for _, v := range components {
+				sort.Ints(v)
+			}
+			sort.Slice(components, func(i, j int) bool {
+				return components[i][0] < components[j][0]
+			})
+
+			for i, c := range components {
+				for j := range c {
+					if c[j] != tc.out[i][j] {
+						t.Fatalf("unexpected components: \nwant %v\ngot %v", tc.out, components)
+					}
+				}
 			}
 		})
 	}
