@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"sort"
 	"testing"
 )
@@ -1414,7 +1415,7 @@ type edgenode struct {
 
 const maxverticies = 100
 
-type graph struct {
+type graph_7 struct {
 	edges      []*edgenode // starts from 1
 	degree     []int
 	nverticies int
@@ -1422,7 +1423,7 @@ type graph struct {
 	directed   bool
 }
 
-func read_graph(g *graph, directed bool, b []byte) error {
+func read_graph_7(g *graph_7, directed bool, b []byte) error {
 	if g.degree == nil {
 		g.degree = make([]int, maxverticies+1)
 	}
@@ -1459,7 +1460,7 @@ func read_graph(g *graph, directed bool, b []byte) error {
 	return nil
 }
 
-func insert_edge(g *graph, x, y int, directed bool) {
+func insert_edge(g *graph_7, x, y int, directed bool) {
 	e := edgenode{y: y, next: g.edges[x]}
 	g.edges[x] = &e
 	g.degree[x]++
@@ -1470,7 +1471,7 @@ func insert_edge(g *graph, x, y int, directed bool) {
 	}
 }
 
-func string_graph(g *graph) string {
+func string_graph(g *graph_7) string {
 	var b bytes.Buffer
 	var e *edgenode
 	for i := 1; i <= g.nverticies; i++ {
@@ -1494,10 +1495,10 @@ func TestGraph_7_2(t *testing.T) {
 		{"4\n1 2\n2 3\n2 4\n3 4\n", false, "1: 2\n2: 4 3 1\n3: 4 2\n4: 3 2\n"},
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			if s := string_graph(&g); s != tc.out {
 				t.Fatalf("unexpected output: \nwant %s\ngot %s", tc.out, s)
 			}
@@ -1512,7 +1513,7 @@ var (
 	graph_time_7       int
 )
 
-func graph_init_search_7(g *graph) {
+func graph_init_search_7(g *graph_7) {
 	for i := 0; i <= g.nverticies; i++ {
 		graph_discovered_7[i] = false
 		graph_processed_7[i] = false
@@ -1520,7 +1521,7 @@ func graph_init_search_7(g *graph) {
 	graph_time_7 = 0
 }
 
-func graph_bfs_7_6(g *graph, s int,
+func graph_bfs_7_6(g *graph_7, s int,
 	process_vertex_before, process_vertex_after func(int),
 	process_edge func(int, int),
 ) {
@@ -1564,10 +1565,10 @@ func TestGraph_bfs_7_6(t *testing.T) {
 		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, "1->2\n2->4\n2->3\n4->3\n"},
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			s := ""
 			graph_init_search_7(&g)
 			graph_bfs_7_6(&g, tc.s, func(i int) {}, func(i int) {}, func(a, b int) {
@@ -1610,10 +1611,10 @@ func TestGraph_bfs_find_path_7_6(t *testing.T) {
 		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, 1, 4, []int{1, 2, 4}},
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			graph_init_search_7(&g)
 			graph_bfs_7_6(&g, tc.start, func(i int) {}, func(i int) {}, func(a, b int) {})
 			path := graph_bfs_find_path_7_6(tc.from, tc.to, graph_parents_7)
@@ -1626,7 +1627,7 @@ func TestGraph_bfs_find_path_7_6(t *testing.T) {
 	}
 }
 
-func graph_connected_components_7_7(g *graph) []int {
+func graph_connected_components_7_7(g *graph_7) []int {
 	var components []int
 	for i := 1; i <= g.nverticies; i++ {
 		if !graph_discovered_7[i] {
@@ -1647,10 +1648,10 @@ func TestGraph_connected_components_7_6(t *testing.T) {
 		{"6\n1 2\n2 3\n2 4\n3 4\n5 6", true, []int{1, 5}},
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			graph_init_search_7(&g)
 			cc := graph_connected_components_7_7(&g)
 			for i := 0; i < len(cc); i++ {
@@ -1672,7 +1673,7 @@ var (
 	graph_bipartite_7_7 = false
 )
 
-func graph_two_color_7_7(g *graph) {
+func graph_two_color_7_7(g *graph_7) {
 	graph_bipartite_7_7 = true
 	for i := range graph_colors_7_7 {
 		graph_colors_7_7[i] = 0
@@ -1705,10 +1706,10 @@ func TestGraph_two_color_7_7(t *testing.T) {
 		{"6\n1 2\n2 3\n2 4\n3 1\n5 6", false, false},
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			graph_init_search_7(&g)
 			graph_two_color_7_7(&g)
 			if graph_bipartite_7_7 != tc.bipartite {
@@ -1724,7 +1725,7 @@ var (
 	graph_dfs_finished   = false
 )
 
-func graph_dfs_7_8(g *graph, s int,
+func graph_dfs_7_8(g *graph_7, s int,
 	process_vertex_before, process_vertex_after func(int),
 	process_edge func(int, int)) {
 
@@ -1764,10 +1765,10 @@ func TestGraph_dfs_7_8(t *testing.T) {
 		{"4\n1 2\n2 3\n2 4\n3 4\n", false, 1, "1->2\n2->4\n4->3\n3->2\n"},
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			s := ""
 			graph_init_search_7(&g)
 			graph_dfs_7_8(&g, tc.s, func(i int) {}, func(i int) {}, func(a, b int) {
@@ -1807,7 +1808,7 @@ func graph_edge_classification_7(x, y int) (int, bool) {
 	return -1, false
 }
 
-func graph_topsort_7_10(g *graph) ([]int, bool) {
+func graph_topsort_7_10(g *graph_7) ([]int, bool) {
 	s := make([]int, 0, g.nverticies)
 	dag := true
 	for i := 1; i <= g.nverticies && !graph_dfs_finished; i++ {
@@ -1842,10 +1843,10 @@ func TestGraph_topsort_7_10(t *testing.T) {
 		{"4\n1 2\n2 3\n2 4\n3 4\n4 1\n", true, nil, false}, // backedge
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			graph_init_search_7(&g)
 			o, ok := graph_topsort_7_10(&g)
 
@@ -1869,7 +1870,7 @@ func TestGraph_topsort_7_10(t *testing.T) {
 // The trick for is that it is really hard to see that code really does the work,
 // but a have written an execution on papaer for a reversed graph and this is actually works.
 // For this graph a transposed graph really has not outgoing edges from [1 2 3] to [4 5 6].
-func graph_strong_components_7_10(g *graph) [][]int {
+func graph_strong_components_7_10(g *graph_7) [][]int {
 	// consider a graph from comment avove.
 
 	dfs1stack := make([]int, 0, g.nverticies)
@@ -1885,7 +1886,7 @@ func graph_strong_components_7_10(g *graph) [][]int {
 
 	// build a transpose graph - the same graph but verticies reversed.
 	// traverse such graph gives us a nodes can reach any node.
-	gt := graph{
+	gt := graph_7{
 		nverticies: g.nverticies,
 		directed:   true,
 	}
@@ -1925,10 +1926,10 @@ func TestGraph_strong_components_7_10(t *testing.T) {
 		{"6\n1 3\n1 2\n2 3\n2 5\n3 4\n4 5\n5 6\n 6 4\n", true, [][]int{{1, 2, 3}, {4, 5, 6}}},
 	}
 
-	var g graph
+	var g graph_7
 	for _, tc := range tt {
 		t.Run("", func(t *testing.T) {
-			read_graph(&g, tc.directed, []byte(tc.in))
+			read_graph_7(&g, tc.directed, []byte(tc.in))
 			graph_init_search_7(&g)
 			components := graph_strong_components_7_10(&g)
 
@@ -2044,6 +2045,119 @@ func Test_findRedundantConnection(t *testing.T) {
 			r := findRedundantConnection(tc.edges)
 			if r[0] != tc.r[0] || r[1] != tc.r[1] {
 				t.Fatalf("unexpected redundant edge: want %v, got %v", tc.r, r)
+			}
+		})
+	}
+}
+
+// Chapter 8. Weighted graphs
+
+func read_weighted_graph_8(g *graph_7, directed bool, b []byte) error {
+	if g.degree == nil {
+		g.degree = make([]int, maxverticies+1)
+	}
+	for i := range g.degree {
+		g.degree[i] = 0
+	}
+	if g.edges == nil {
+		g.edges = make([]*edgenode, maxverticies+1)
+	}
+	for i := range g.edges {
+		g.edges[i] = nil
+	}
+	g.nedges = 0
+	g.nverticies = 0
+	g.directed = directed
+
+	s := bufio.NewScanner(bytes.NewBuffer(b))
+	if !s.Scan() {
+		return nil
+	}
+	if _, err := fmt.Fscanf(bytes.NewBuffer(s.Bytes()), "%d", &g.nverticies); err != nil {
+		return err
+	}
+
+	var x, y, weight int
+	for s.Scan() {
+		if _, err := fmt.Fscanf(bytes.NewBuffer(s.Bytes()), "%d %d %d", &x, &y, &weight); err != nil {
+			return err
+		}
+
+		insert_edge_weighted_8(g, x, y, weight, directed)
+	}
+
+	return nil
+}
+
+func insert_edge_weighted_8(g *graph_7, x, y, weight int, directed bool) {
+	e := edgenode{y: y, weight: weight, next: g.edges[x]}
+	g.edges[x] = &e
+	g.degree[x]++
+	if !directed {
+		insert_edge_weighted_8(g, y, x, weight, true)
+	} else {
+		g.nedges++
+	}
+}
+
+// mst stands for minimum spanning tree
+
+func prim_mst_8(g *graph_7, start int) int {
+	intree := make([]bool, g.nverticies+1)
+	distance := make([]int, g.nverticies+1)
+	for i := 1; i <= g.nverticies; i++ {
+		distance[i] = math.MaxInt
+		graph_parents_7[i] = -1
+	}
+	total := 0
+	dist := 0
+
+	v := start
+	for !intree[v] {
+		intree[v] = true
+		if v != start {
+			fmt.Printf("prim_mst_8: adding edge (%d, %d) with weight %d\n", graph_parents_7[v], v, distance[v])
+			total += distance[v]
+		}
+
+		for p := g.edges[v]; p != nil; p = p.next {
+			if !intree[p.y] && distance[p.y] > p.weight {
+				distance[p.y] = p.weight
+				graph_parents_7[p.y] = v
+			}
+		}
+
+		dist = math.MaxInt
+		for i := 1; i <= g.nverticies; i++ {
+			if !intree[i] && dist > distance[i] {
+				dist = distance[i]
+				v = i
+			}
+		}
+	}
+
+	return total
+}
+
+func TestWeightedGraph_prim_mht_8(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+
+		out int
+	}{
+		{"7\n7 1 5\n7 2 7\n7 3 9\n1 3 7\n2 3 4\n1 5 12\n5 3 4\n5 6 7\n6 3 3\n6 2 2\n2 4 5\n4 6 2\n",
+			false, 23},
+	}
+
+	var g graph_7
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_weighted_graph_8(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			w := prim_mst_8(&g, 7)
+			if w != tc.out {
+				t.Fatalf("unexpected output: want %d, got %d", tc.out, w)
 			}
 		})
 	}
