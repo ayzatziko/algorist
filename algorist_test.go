@@ -52,6 +52,7 @@ func TestSorts(t *testing.T) {
 	}
 }
 
+// for each e select next min and swap with current.
 func selectionSort_ch_2_5_1(items []int) []int {
 	if items == nil {
 		return nil
@@ -76,6 +77,7 @@ func selectionSort_ch_2_5_1(items []int) []int {
 	return s
 }
 
+// select and elem and swap back until hit smaller element.
 func insertionSort_ch_2_5_2(items []int) []int {
 	if items == nil {
 		return nil
@@ -115,6 +117,7 @@ func TestStringPatternMatching(t *testing.T) {
 	}
 }
 
+// for each char in p test wheter p[i:i+len(t)] == t, if ok ret first char index.
 func findmatch_ch_2_5_3(p, t string) int {
 	pn, tn := len(p), len(t)
 
@@ -125,6 +128,29 @@ func findmatch_ch_2_5_3(p, t string) int {
 		return i
 	}
 	return -1
+}
+
+type matrix struct {
+	rows, columns int
+	m             [][]int
+}
+
+// no matrices equality tests since we assume they always hold.
+// matrices multiplication.
+func matrixmult_ch_2_5_4(a, b matrix) matrix {
+	c := matrix{rows: a.rows, columns: b.columns, m: make([][]int, a.rows)}
+
+	for i := 0; i < c.rows; i++ {
+		c.m[i] = make([]int, b.columns)
+		for j := 0; j < c.columns; j++ {
+
+			for k := 0; k < b.rows; k++ {
+				c.m[i][j] += a.m[i][k] * b.m[k][j]
+			}
+		}
+	}
+
+	return c
 }
 
 func TestMatrixmult(t *testing.T) {
@@ -155,38 +181,94 @@ func TestMatrixmult(t *testing.T) {
 	}
 }
 
-type matrix struct {
-	rows, columns int
-	m             [][]int
-}
-
-// no matrices equality tests since we assume they always hold.
-func matrixmult_ch_2_5_4(a, b matrix) matrix {
-	c := matrix{rows: a.rows, columns: b.columns, m: make([][]int, a.rows)}
-
-	for i := 0; i < c.rows; i++ {
-		c.m[i] = make([]int, b.columns)
-		for j := 0; j < c.columns; j++ {
-
-			for k := 0; k < b.rows; k++ {
-				c.m[i][j] += a.m[i][k] * b.m[k][j]
-			}
-		}
-	}
-
-	return c
-}
-
 // Chapter 3: Data Structures.
 
 // arr is a fixed size array.
 var arr [3]int
 
-var arrdyn []int
+var arrdyn []int // dynamic array with size increased if no place for new element. build upon fixed size arrays.
 
 func TestArray(t *testing.T) { arrdyn = arr[:]; fmt.Println(arrdyn) } // to avoid unused linter error.
 
 // Chapter 3.1.2
+
+type list_ch_3_1_2 struct {
+	item int            // data item
+	next *list_ch_3_1_2 // point to successor
+}
+
+// recurively test whether two lists are equal.
+func lists_eq_help_3_1_2(l0, l1 *list_ch_3_1_2) bool {
+	if l0 == nil && l1 == nil {
+		return true
+	} else if l0 == nil || l1 == nil || l0.item != l1.item {
+		return false
+	}
+	return lists_eq_help_3_1_2(l0.next, l1.next)
+}
+
+// recursive search for an item.
+func searchList_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
+	if l == nil {
+		return nil
+	}
+	if l.item == item {
+		return l
+	}
+
+	return searchList_ch_3_1_2(l.next, item)
+}
+
+// l is assumed is not nil, but can point to nil list.
+func insertList_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
+	return &list_ch_3_1_2{item, l}
+}
+
+// delete elem from list by chainging predecessor(item) next ponter to cur item next elem.
+func deleteList_ch_3_1_2(l *list_ch_3_1_2, item int, predecessor func(*list_ch_3_1_2, int) *list_ch_3_1_2) *list_ch_3_1_2 {
+	if l == nil {
+		return nil
+	}
+	if l.item == item {
+		l.next = nil
+		return l
+	}
+
+	p := predecessor(l, item)
+	if p == nil {
+		return nil
+	}
+	d := p.next
+	p.next = nil
+	if n := d.next; n != nil {
+		d.next = nil
+		p.next = n
+	}
+
+	return d
+}
+
+// recursive predecessor search.
+func predecessorList_recursive_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
+	if l.next == nil {
+		return nil
+	} else if l.next.item == item {
+		return l
+	}
+	return predecessorList_recursive_ch_3_1_2(l.next, item)
+}
+
+// iterative one.
+func predecessorList_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
+	for ; ; l = l.next {
+		if l == nil || l.next == nil {
+			return nil
+		}
+		if l.next.item == item {
+			return l
+		}
+	}
+}
 
 func TestList_3_1_1(t *testing.T) {
 	eqT := func(l0, l1 *list_ch_3_1_2) {
@@ -215,79 +297,6 @@ func TestList_3_1_1(t *testing.T) {
 	eqT(&list_ch_3_1_2{item: 1}, deleteList_ch_3_1_2(tlist, 1, predecessorList_ch_3_1_2))
 }
 
-func lists_eq_help_3_1_2(l0, l1 *list_ch_3_1_2) bool {
-	if l0 == nil && l1 == nil {
-		return true
-	} else if l0 == nil || l1 == nil || l0.item != l1.item {
-		return false
-	}
-	return lists_eq_help_3_1_2(l0.next, l1.next)
-}
-
-type list_ch_3_1_2 struct {
-	item int            // data item
-	next *list_ch_3_1_2 // point to successor
-}
-
-func searchList_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
-	if l == nil {
-		return nil
-	}
-	if l.item == item {
-		return l
-	}
-
-	return searchList_ch_3_1_2(l.next, item)
-}
-
-// l is assumed is not nil, but can point to nil list.
-func insertList_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
-	return &list_ch_3_1_2{item, l}
-}
-
-func deleteList_ch_3_1_2(l *list_ch_3_1_2, item int, predecessor func(*list_ch_3_1_2, int) *list_ch_3_1_2) *list_ch_3_1_2 {
-	if l == nil {
-		return nil
-	}
-	if l.item == item {
-		l.next = nil
-		return l
-	}
-
-	p := predecessor(l, item)
-	if p == nil {
-		return nil
-	}
-	d := p.next
-	p.next = nil
-	if n := d.next; n != nil {
-		d.next = nil
-		p.next = n
-	}
-
-	return d
-}
-
-func predecessorList_recursive_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
-	if l.next == nil {
-		return nil
-	} else if l.next.item == item {
-		return l
-	}
-	return predecessorList_recursive_ch_3_1_2(l.next, item)
-}
-
-func predecessorList_ch_3_1_2(l *list_ch_3_1_2, item int) *list_ch_3_1_2 {
-	for ; ; l = l.next {
-		if l == nil || l.next == nil {
-			return nil
-		}
-		if l.next.item == item {
-			return l
-		}
-	}
-}
-
 // Binary search tree 3.4.1
 type bstitem struct {
 	key string
@@ -298,27 +307,6 @@ type bstree struct {
 	item                bstitem
 	parent, left, right *bstree
 }
-
-// func search_bst(t *bstree, k string) *bstree {
-// 	if t == nil || t.item.key == k {
-// 		return t
-// 	}
-// 	if t.item.key > k {
-// 		return search_bst(t.left, k)
-// 	}
-
-// 	return search_bst(t.right, k)
-// }
-
-// func min_bst(t *bstree) *bstree {
-// 	if t == nil {
-// 		return nil
-// 	} else if t.left == nil {
-// 		return t
-// 	}
-
-// 	return min_bst(t.left)
-// }
 
 func max_bst(t *bstree) *bstree {
 	if t == nil {
@@ -783,7 +771,10 @@ func TestConstantPushPopFindminStack_3_10_5(t *testing.T) {
 	testpop(&s, 3)
 }
 
+// noticed that started to write C like style since all code in algorithm design manual written in C.
+
 // https://leetcode.com/problems/count-of-smaller-numbers-after-self/
+// Solution description https://leetcode.com/problems/count-of-smaller-numbers-after-self/discuss/2411749/Golang-solution.
 func countSmaller(ints []int) []int {
 	sort.Ints(ints)
 	var t *left_count_bst_e
@@ -892,6 +883,8 @@ func build_balanced_tree(ints []int, n **left_count_bst_e) {
 	build_balanced_tree(right, n)
 }
 
+// invirants tests below were used to find bugs, after bugfixes they are unused.
+// leave even if unised since they has helped.
 func test_balanced_tree_invariant(n *left_count_bst_e) {
 	if n == nil {
 		return
@@ -983,6 +976,7 @@ func TestCountSmaller(t *testing.T) {
 
 // Chapter 4. Heap and heapsort
 
+// does not guranatee left tree root less then right tree root.
 type heap_4_3 []int
 
 var make_heap_4_3 = make_heap_slow_4_3
@@ -999,6 +993,7 @@ func make_heap_slow_4_3(h *heap_4_3, ints []int) {
 	}
 }
 
+// fast since making heap starts from len(h)/2 to 0.
 func make_heap_fast_4_3(h *heap_4_3, ints []int) {
 	n := len(ints) + 1
 	if cap(*h) < n {
@@ -1356,6 +1351,7 @@ func TestFindMedianSortedArrays(t *testing.T) {
 }
 
 // https://leetcode.com/problems/maximum-subarray/
+// not solved :(
 func maxSubArray(nums []int) int {
 	s, _, _ := maxSubArrayRecursive(nums, 0, len(nums))
 	return s
@@ -1506,6 +1502,7 @@ func TestGraph_7_2(t *testing.T) {
 	}
 }
 
+// dont bother about vars globality, in real code they all will be used as arguments.
 var (
 	graph_discovered_7 = make([]bool, maxverticies+1)
 	graph_processed_7  = make([]bool, maxverticies+1)
@@ -1521,14 +1518,15 @@ func graph_init_search_7(g *graph_7) {
 	graph_time_7 = 0
 }
 
+// insert start el in queue.
+// for each vertex in queue mark current el discovered, insert all undiscovered elements in queue, process until queue not empty.
 func graph_bfs_7_6(g *graph_7, s int,
 	process_vertex_before, process_vertex_after func(int),
 	process_edge func(int, int),
 ) {
 
 	queue := make([]int, 1, g.nverticies)
-	queue[0] = s
-	graph_discovered_7[s] = true
+	queue[0] = s // at the beggining only 1 element in queue.
 	graph_parents_7[s] = -1
 
 	for len(queue) > 0 {
@@ -1582,6 +1580,7 @@ func TestGraph_bfs_7_6(t *testing.T) {
 	}
 }
 
+// build path from parents array by pointing back from s until we hit e.
 func graph_bfs_find_path_7_6(s, e int, parents []int) []int {
 	path := graph_bfs_find_path_recursive_7_6(s, e, parents, nil)
 	for i, e := 0, len(path)-1; i < e; i, e = i+1, e-1 {
@@ -1627,6 +1626,9 @@ func TestGraph_bfs_find_path_7_6(t *testing.T) {
 	}
 }
 
+// components connected if v0 from component 1 have a path to v1 from component2.
+// bfs from s adds only reachable vericies from s, so all added verticies belongs to 1 component.
+// we itereate over all verticies, all undisovered verticies are considered to be a separated component.
 func graph_connected_components_7_7(g *graph_7) []int {
 	var components []int
 	for i := 1; i <= g.nverticies; i++ {
@@ -1673,6 +1675,9 @@ var (
 	graph_bipartite_7_7 = false
 )
 
+// partners a man and woman, woman cannot has a woman partner, man cannot have a man partner.
+// graph is bipartite if we can color verticies by an opposite color of parent.
+// if in case we changing a already colored v to other color, than graph is not bipartite.
 func graph_two_color_7_7(g *graph_7) {
 	graph_bipartite_7_7 = true
 	for i := range graph_colors_7_7 {
@@ -1720,11 +1725,17 @@ func TestGraph_two_color_7_7(t *testing.T) {
 }
 
 var (
+	// entry/exit times are needed to correctly identify edge type, see graph edge classification func.
 	graph_entry_time_7_7 = make([]int, maxverticies+1)
 	graph_exit_time_7_7  = make([]int, maxverticies+1)
-	graph_dfs_finished   = false
+
+	// to faster exit from dfs.
+	graph_dfs_finished = false
 )
 
+// dfs is based on stack which is naturally implemented by call stack.
+// mark current v as entered and discovered, for each adjacent edge (if we can) do a dfs.
+// after processing all adjacent edges mark current is processed. Child nodes are processed earlier than parent node.
 func graph_dfs_7_8(g *graph_7, s int,
 	process_vertex_before, process_vertex_after func(int),
 	process_edge func(int, int)) {
@@ -1795,19 +1806,24 @@ const (
 func graph_edge_classification_7(x, y int) (int, bool) {
 	switch {
 	case graph_parents_7[y] == x:
-		return edge_tree, true
+		return edge_tree, true // parent points to child
 	case graph_discovered_7[y] && !graph_processed_7[y]:
-		return edge_back, true
+		return edge_back, true // y is in discovered but not processed, than it is above in call stack, than this edge points back.
 	case graph_processed_7[y] && graph_entry_time_7_7[y] > graph_entry_time_7_7[x]:
-		return edge_forward, true
+		return edge_forward, true // already processed by one of x parent's childs, this edge is like a teleport forward.
 	case graph_processed_7[y] && graph_entry_time_7_7[y] < graph_entry_time_7_7[x]:
-		return edge_cross, true
+		return edge_cross, true // processed by one of x's parent's child
 	}
 
 	fmt.Printf("Warning: self loop (%d,%d)\n", x, y)
 	return -1, false
 }
 
+// top sort is based on idea that last processed item is a start point to process earlier appeared items.
+// so append in process edge laster and reverse array.
+// looks a bit like a connected component algo, idea behind that is node is not discovered then there are no
+// path from discovered node to undiscovered, but path from undiscovered to discovered must exist. Then undiscovered
+// node must appear earlier in topsort.
 func graph_topsort_7_10(g *graph_7) ([]int, bool) {
 	s := make([]int, 0, g.nverticies)
 	dag := true
@@ -1988,6 +2004,7 @@ func Test_findMinHeightTrees(t *testing.T) {
 
 // https://leetcode.com/problems/redundant-connection/
 func findRedundantConnection(edges [][]int) []int {
+	// self designed union find ds. implemented properely later.
 	sets := map[int][]int{}
 	setheads := map[int]int{}
 	add := func(e []int) bool {
@@ -2101,7 +2118,10 @@ func insert_edge_weighted_8(g *graph_7, x, y, weight int, directed bool) {
 }
 
 // mst stands for minimum spanning tree
-
+// start point has a weight 0.
+// until current processing item not in tree, add to tree and to a total weight,
+// for current item update distances to edges, select a smallest one and set current item to a smallest one.
+// exists in case of for current el all adjacent nodes are inserted so v stays unchaged.
 func prim_mst_8(g *graph_7, start int) int {
 	intree := make([]bool, g.nverticies+1)
 	distance := make([]int, g.nverticies+1)
