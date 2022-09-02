@@ -1949,3 +1949,102 @@ func TestGraph_strong_components_7_10(t *testing.T) {
 		})
 	}
 }
+
+// https://leetcode.com/problems/minimum-height-trees/
+// cant solve for now:(
+func findMinHeightTrees(n int, rawedges [][]int) []int {
+	return nil
+}
+
+func Test_findMinHeightTrees(t *testing.T) {
+	tt := []struct {
+		n     int
+		edges [][]int
+
+		out []int
+	}{
+		{4, [][]int{{1, 0}, {1, 2}, {1, 3}}, []int{1}},
+		{6, [][]int{{3, 0}, {3, 1}, {3, 2}, {3, 4}, {5, 4}}, []int{3, 4}},
+		{1, [][]int{}, []int{0}},
+		{2, [][]int{{0, 1}}, []int{0, 1}},
+	}
+
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			o := findMinHeightTrees(tc.n, tc.edges)
+			if len(o) != len(tc.out) {
+				t.Fatalf("unexpected output: want %v, got %v", tc.out, o)
+			}
+
+			for i, v := range o {
+				if v != tc.out[i] {
+					t.Fatalf("unexpected output: want %v, got %v", tc.out, o)
+				}
+			}
+		})
+	}
+}
+
+// https://leetcode.com/problems/redundant-connection/
+func findRedundantConnection(edges [][]int) []int {
+	sets := map[int][]int{}
+	setheads := map[int]int{}
+	add := func(e []int) bool {
+		h0, ok0 := setheads[e[0]]
+		h1, ok1 := setheads[e[1]]
+		if !ok0 && !ok1 { // no edges in any set, create one
+			sets[e[0]] = append(sets[e[0]], e[0], e[1])
+			setheads[e[0]] = e[0]
+			setheads[e[1]] = e[0]
+			return false
+		} else if ok0 && !ok1 { // first v in set, add to existing
+			sets[h0] = append(sets[h0], e[1])
+			setheads[e[1]] = h0
+			return false
+		} else if !ok0 && ok1 {
+			sets[h1] = append(sets[h1], e[0])
+			setheads[e[0]] = h1
+			return false
+		} else if h0 != h1 {
+			// connect graphs by new edge, still tree, merge sets
+			for _, v := range sets[h1] {
+				setheads[v] = h0
+			}
+			sets[h0] = append(sets[h0], sets[h1]...)
+			delete(sets, h1)
+			return false
+		}
+
+		// already in the same set
+		return true
+	}
+
+	m := -1
+	for i, e := range edges {
+		if add(e) {
+			m = i
+		}
+	}
+
+	return edges[m]
+}
+
+func Test_findRedundantConnection(t *testing.T) {
+	tt := []struct {
+		edges [][]int
+		r     []int
+	}{
+		{[][]int{{1, 2}, {1, 3}, {2, 3}}, []int{2, 3}},
+		{[][]int{{1, 2}, {2, 3}, {3, 4}, {1, 4}, {1, 5}}, []int{1, 4}},
+		{[][]int{{1, 5}, {3, 4}, {3, 5}, {4, 5}, {2, 4}}, []int{4, 5}},
+	}
+
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			r := findRedundantConnection(tc.edges)
+			if r[0] != tc.r[0] || r[1] != tc.r[1] {
+				t.Fatalf("unexpected redundant edge: want %v, got %v", tc.r, r)
+			}
+		})
+	}
+}
