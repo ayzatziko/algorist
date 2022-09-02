@@ -2139,7 +2139,7 @@ func prim_mst_8(g *graph_7, start int) int {
 	return total
 }
 
-func TestWeightedGraph_prim_mht_8(t *testing.T) {
+func TestWeightedGraph_prim_mst_8(t *testing.T) {
 	tt := []struct {
 		in       string
 		directed bool
@@ -2156,6 +2156,136 @@ func TestWeightedGraph_prim_mht_8(t *testing.T) {
 			read_weighted_graph_8(&g, tc.directed, []byte(tc.in))
 			graph_init_search_7(&g)
 			w := prim_mst_8(&g, 7)
+			if w != tc.out {
+				t.Fatalf("unexpected output: want %d, got %d", tc.out, w)
+			}
+		})
+	}
+}
+
+// kruskal algo idea is to peek smallest by weight not inserted edge, and if verticies
+// of edge is not in the same component merge components and build by this procedure
+// minimum spanning tree.
+func kruskal_mst_8(g *graph_7) int {
+	wedges := make([]weighted_edge_8, 0, g.nedges)
+	for x, p := range g.edges {
+		for ; p != nil; p = p.next {
+			wedges = append(wedges, weighted_edge_8{x, p.y, p.weight})
+		}
+	}
+	quicksort_edges_kruskal(wedges)
+
+	var set union_find_8
+	init_union_find_8(&set, g.nverticies)
+
+	total := 0
+	for _, we := range wedges {
+		if !same_component_8(&set, we.x, we.y) {
+			fmt.Printf("kruskal: adding edge(%d, %d, %d) into mst", we.x, we.y, we.weight)
+			union_sets_8(&set, we.x, we.y)
+			total += we.weight
+		}
+	}
+
+	return total
+}
+
+type weighted_edge_8 struct {
+	x, y, weight int
+}
+
+func quicksort_edges_kruskal(wedges []weighted_edge_8) {
+	if len(wedges) <= 1 {
+		return
+	}
+
+	last := len(wedges) - 1
+	p := wedges[last]
+	firsthigh := 0
+
+	for i := 0; i < last; i++ {
+		if wedges[i].weight < p.weight {
+			wedges[firsthigh], wedges[i] = wedges[i], wedges[firsthigh]
+			firsthigh++
+		}
+	}
+
+	wedges[firsthigh], wedges[last] = wedges[last], wedges[firsthigh]
+	quicksort_edges_kruskal(wedges[:firsthigh])
+	quicksort_edges_kruskal(wedges[firsthigh+1:])
+}
+
+// I already implemented union_find data structure by myself, this is the other one.
+// union find data structure is needed to fast comparison whether 2 verticies belongs
+// to the same component or not and constant components merge.
+
+const set_size = 100
+
+type union_find_8 struct {
+	parent []int
+	size   []int
+	n      int
+}
+
+func init_union_find_8(s *union_find_8, n int) {
+	s.n = n
+	if s.size == nil {
+		s.size = make([]int, set_size+1)
+	}
+	if s.parent == nil {
+		s.parent = make([]int, set_size+1)
+	}
+	for i := 1; i <= n+1; i++ {
+		s.size[i] = 1
+		s.parent[i] = i
+	}
+}
+
+func find_8(s *union_find_8, x int) int {
+	if p := s.parent[x]; p != x {
+		return find_8(s, p)
+	}
+	return x
+}
+
+func union_sets_8(s *union_find_8, x, y int) {
+	r1, r2 := find_8(s, x), find_8(s, y)
+	if r1 == r2 {
+		return // already in the same set
+	}
+
+	// merge smaller tree into bigger one to not increase tree height
+	if s.size[r1] < s.size[r2] {
+		s.size[r2] += s.size[r1]
+		s.parent[r1] = r2
+		return
+	}
+
+	s.size[r1] += s.size[r2]
+	s.parent[r2] = r1
+}
+
+func same_component_8(s *union_find_8, x, y int) bool {
+	return find_8(s, x) == find_8(s, y)
+}
+
+func TestWeightedGraph_prim_mht_8(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+
+		out int
+	}{
+		{"7\n7 1 5\n7 2 7\n7 3 9\n1 3 7\n2 3 4\n1 5 12\n5 3 4\n5 6 7\n6 3 3\n6 2 2\n2 4 5\n4 6 2\n",
+			false, 23},
+	}
+
+	var g graph_7
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_weighted_graph_8(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			w := kruskal_mst_8(&g)
 			if w != tc.out {
 				t.Fatalf("unexpected output: want %d, got %d", tc.out, w)
 			}
