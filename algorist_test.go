@@ -2312,3 +2312,71 @@ func TestWeightedGraph_prim_mht_8(t *testing.T) {
 		})
 	}
 }
+
+// related probles to mst
+// max span tree: find by prim/kruskal by negating weights.
+// min product span tree: didnot understand about weight products, but to use algo to find min prod st is replace weight by log(weight)
+
+// same as mst prim, but update distance to new node each time new distance (distance to v + y edge weight) less than old distance to y.
+// for each elem not in tree take element with less distance and process it.
+// ends when all edges a added and v is not updated.
+func graph_dijkstra_shortest_path_8(g *graph_7, s int) (int, []int) {
+	intree := make([]bool, g.nverticies+1)
+	distance := make([]int, g.nverticies+1)
+	for i := 1; i <= g.nverticies; i++ {
+		distance[i] = math.MaxInt
+		graph_parents_7[i] = -1
+	}
+	distance[s] = 0
+	weight := 0
+	v := s
+	for !intree[v] {
+		intree[v] = true
+		if v != s {
+			fmt.Printf("dijkstra shortest path: add edge (%d, %d, %d)\n", graph_parents_7[v], v, distance[v])
+			weight += distance[v]
+		}
+
+		for p := g.edges[v]; p != nil; p = p.next {
+			if distance[p.y] > distance[v]+p.weight {
+				distance[p.y] = distance[v] + p.weight
+				graph_parents_7[p.y] = v
+			}
+		}
+
+		dist := math.MaxInt
+		for i := 1; i <= g.nverticies; i++ {
+			if !intree[i] && distance[i] < dist {
+				v = i
+				dist = distance[i]
+			}
+		}
+	}
+
+	return weight, distance
+}
+
+func TestWeightedGraph_dikkstra_shortest_path_8(t *testing.T) {
+	tt := []struct {
+		in       string
+		directed bool
+
+		s, t, dist int
+	}{
+		{"7\n1 2 5\n2 3 7\n1 3 9\n1 4 7\n4 3 4\n2 5 12\n5 3 4\n5 6 7\n6 3 3\n4 6 2\n4 7 5\n7 6 2\n",
+			false, 1, 7, 11},
+		{"4\n1 2 1\n1 3 2\n2 4 10\n3 4 2", false, 1, 4, 4},
+	}
+
+	var g graph_7
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			read_weighted_graph_8(&g, tc.directed, []byte(tc.in))
+			graph_init_search_7(&g)
+			_, dist := graph_dijkstra_shortest_path_8(&g, tc.s)
+			if dist[tc.t] != tc.dist {
+				t.Fatalf("unexpected output: want %d, got %d", tc.dist, dist[tc.t])
+			}
+		})
+	}
+}
