@@ -2380,3 +2380,44 @@ func TestWeightedGraph_dikkstra_shortest_path_8(t *testing.T) {
 		})
 	}
 }
+
+type graph_adjacency_matrix_8 struct {
+	weight     [][]int
+	nverticies int
+}
+
+func graph_conv_8(g_src *graph_7, g_dst *graph_adjacency_matrix_8) {
+	g_dst.nverticies = g_src.nverticies
+	g_dst.weight = make([][]int, g_src.nverticies+1)
+	for i := 1; i <= g_src.nverticies; i++ {
+		w := make([]int, g_src.nverticies+1)
+		g_dst.weight[i] = w
+		for k := 1; k <= g_src.nverticies; k++ {
+			w[i] = math.MaxInt
+		}
+
+		for p := g_src.edges[i]; p != nil; p = p.next {
+			w[p.y] = p.weight
+		}
+	}
+}
+
+// floyd-warshall algorithm
+// the idea is for each i to j vertex test is there a vertex k with path weight of i to k to j is less than i to j, adjust i to j
+// weight if test passed.
+// TODO: TEST.
+func graph_floyd_8(g *graph_adjacency_matrix_8) {
+	through_k := 0
+	nver := g.nverticies
+	for k := 1; k <= nver; k++ {
+		for i := 1; k <= nver; k++ {
+			for j := 1; k <= nver; k++ {
+				if through_k = g.weight[i][k] + g.weight[k][j]; through_k < g.weight[i][j] {
+					g.weight[i][j] = through_k
+				}
+			}
+		}
+	}
+}
+
+// TODO: did not understand about network flows (chapter 8.5) and randomized min cut (8.6).
