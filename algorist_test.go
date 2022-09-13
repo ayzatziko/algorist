@@ -2421,3 +2421,66 @@ func graph_floyd_8(g *graph_adjacency_matrix_8) {
 }
 
 // TODO: did not understand about network flows (chapter 8.5) and randomized min cut (8.6).
+
+// chapter 9. backtracking
+func backtrack_knapsack_9(input, in_bag []int, vol int, process_solution func([]int)) {
+	if vol == 0 { // is a solution
+		process_solution(in_bag) // process solution
+	} else {
+		// generate candidates
+		candidates := []int{}
+		left := make([]int, 0, len(input))
+		for _, v := range input {
+			if v <= vol { // prune search space
+				candidates = append(candidates, v)
+			} else {
+				// I could sort array and use bin search to trim candidates, but left as is for education purposes
+				left = append(left, v)
+			}
+		}
+
+		var new_input []int
+		n := len(in_bag)
+		for i, c := range candidates {
+			new_input = append(append(left, candidates[:i]...), candidates[i+1:]...)
+			in_bag = append(in_bag, c)
+			backtrack_knapsack_9(new_input, in_bag, vol-c, process_solution)
+			in_bag = in_bag[:n]
+		}
+	}
+}
+
+func Test_backtrack_knapsack_9(t *testing.T) {
+	tt := []struct {
+		input []int
+		vol   int
+
+		solN int
+	}{
+		{[]int{1, 2, 3, 4, 5, 6}, 9, 22}, // [1,2,6] (6), [1, 3, 5](6), [3, 6](2), [2,3,4](6), [4,5](2): 22
+	}
+
+	for _, tc := range tt {
+		t.Run("", func(t *testing.T) {
+			solN := 0
+			backtrack_knapsack_9(tc.input, []int{}, tc.vol, func(sol []int) {
+				solN++
+				vol := 0
+				for _, v := range sol {
+					vol += v
+				}
+				if vol != tc.vol {
+					t.Fatalf("bad solution %v (want vol %d, got %v)", sol, tc.vol, vol)
+				}
+				fmt.Printf("{")
+				for _, v := range sol {
+					fmt.Printf(" %d", v)
+				}
+				fmt.Println(" }")
+			})
+			if solN != tc.solN {
+				t.Fatalf("unexpected solution count: want %d, got %d", solN, tc.solN)
+			}
+		})
+	}
+}
