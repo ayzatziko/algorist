@@ -1,4 +1,4 @@
-package algorist
+package tycs_test
 
 import (
 	"bufio"
